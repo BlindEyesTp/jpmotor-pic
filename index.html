@@ -1,0 +1,371 @@
+
+<!-- saved from url=(0011)about:blank -->
+<html lang="zh-CN"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>电商首图生成工具</title>
+    <style>
+        :root {
+            --primary: #ff6600;
+            --bg: #f0f2f5;
+            --panel-bg: #ffffff;
+            --text: #333333;
+            --border: #e0e0e0;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+        }
+        /* 左侧控制栏 */
+        .sidebar {
+            width: 350px;
+            min-width: 350px;
+            background: var(--panel-bg);
+            border-right: 1px solid var(--border);
+            padding: 24px;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            overflow-y: auto;
+            z-index: 10;
+        }
+        h2 { margin: 0 0 10px 0; font-size: 20px; color: var(--primary); }
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding-bottom: 16px;
+            border-bottom: 1px dashed var(--border);
+        }
+        .control-group:last-child { border-bottom: none; }
+        label { font-size: 14px; font-weight: 600; }
+        input[type="file"], select {
+            width: 100%; padding: 8px; border: 1px solid var(--border);
+            border-radius: 4px; box-sizing: border-box;
+        }
+        .range-wrap { display: flex; align-items: center; gap: 10px; }
+        input[type="range"] { flex: 1; accent-color: var(--primary); }
+        .range-val { width: 40px; font-size: 12px; text-align: right; }
+        .checkbox-group { display: flex; flex-direction: column; gap: 8px; }
+        .checkbox-label { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: normal; cursor: pointer;}
+        button.download-btn {
+            background: var(--primary); color: white; border: none;
+            padding: 12px; border-radius: 6px; font-size: 16px; font-weight: bold;
+            cursor: pointer; transition: 0.2s; margin-top: 10px;
+        }
+        button.download-btn:hover { background: #e65c00; }
+
+        /* 右侧预览区 */
+        .preview-area {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            background-color: var(--bg);
+            background-image: linear-gradient(45deg, #ddd 25%, transparent 25%), 
+                              linear-gradient(-45deg, #ddd 25%, transparent 25%), 
+                              linear-gradient(45deg, transparent 75%, #ddd 75%), 
+                              linear-gradient(-45deg, transparent 75%, #ddd 75%);
+            background-size: 20px 20px;
+            background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+        }
+        canvas {
+            background: #ffffff;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            max-width: 100%;
+            max-height: 90vh;
+            aspect-ratio: 1 / 1;
+            object-fit: contain;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <h2>🛠️ 首图生成器</h2>
+        
+        <div class="control-group">
+            <label>1. 上传产品白底图</label>
+            <input type="file" id="upload-img" accept="image/*">
+        </div>
+
+        <div class="control-group">
+            <label>2. 图片位置调节</label>
+            <div class="range-wrap">
+                <span style="font-size: 12px; width: 30px;">缩放</span>
+                <input type="range" id="scale" min="0.1" max="3" step="0.01" value="1">
+                <span class="range-val" id="scale-val">1.00</span>
+            </div>
+            <div class="range-wrap">
+                <span style="font-size: 12px; width: 30px;">旋转</span>
+                <input type="range" id="rotate" min="-180" max="180" step="1" value="0">
+                <span class="range-val" id="rotate-val">0°</span>
+            </div>
+            <div class="range-wrap">
+                <span style="font-size: 12px; width: 30px;">上下</span>
+                <input type="range" id="offsetY" min="-1000" max="1000" step="10" value="0">
+                <span class="range-val" id="offsetY-val">0</span>
+            </div>
+            <div class="range-wrap">
+                <span style="font-size: 12px; width: 30px;">左右</span>
+                <input type="range" id="offsetX" min="-1000" max="1000" step="10" value="0">
+                <span class="range-val" id="offsetX-val">0</span>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label>3. 选择产品类型 (标题图)</label>
+            <select id="product-type">
+                <option value="mirrors">REARVIEW MIRRORS (后视镜)</option>
+                <option value="exhaust">EXHAUST PIPE (排气管)</option>
+                <option value="accessories">ACCESSORIES (摩托车配件)</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label>4. 选择产品卖点 (图片叠加)</label>
+            <div class="checkbox-group" id="selling-points-container">
+                </div>
+        </div>
+
+        <button class="download-btn" id="download-btn">📥 导出 1024x1024 首图</button>
+    </div>
+
+    <div class="preview-area">
+        <canvas id="canvas" width="1024" height="1024"></canvas>
+    </div>
+
+    <script>
+        // ==========================================
+        // 🛠️ 配置区
+        // ==========================================
+        const ASSETS_CONFIG = {
+            frameImage: './images/Cover.png',
+            
+            titleImages: {
+                'mirrors': './images/Mirror.png',
+                'exhaust': './images/Pipe.png',
+                'accessories': './images/Accessories.png'
+            },
+            
+            // 标题缩放倍率已修改为 0.75
+            titlePosition: { x: 50, y: 220, scale: 0.75 },
+
+            sellingPointImages: {
+                'waterproof': './images/Waterproof.png',
+                'durability': './images/HIGH DURABILITY.png',
+                'adjustable': './images/360° ADJUSTABLE.png',
+                'installation': './images/EASY INSTALLATION.png'
+            },
+
+            sellingPointLayout: {
+                startX: 50,      
+                startY: 480,     
+                gapY: 80,        
+                width: 340,      
+                height: 64       
+            }
+        };
+
+        const SELLING_POINTS_DATA = [
+            { id: 'waterproof', label: 'WATERPROOF' },
+            { id: 'durability', label: 'HIGH DURABILITY' },
+            { id: 'adjustable', label: '360° ADJUSTABLE' },
+            { id: 'installation', label: 'EASY INSTALLATION' }
+        ];
+
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        let productImg = null;
+        let loadedAssets = {
+            frame: null,
+            titles: {},
+            sellingPoints: {}
+        };
+
+        // 状态中新增了 rotate
+        let state = {
+            scale: 1,
+            rotate: 0,
+            offsetX: 0,
+            offsetY: 0,
+            productType: 'mirrors',
+            selectedPoints: SELLING_POINTS_DATA.map(sp => sp.id)
+        };
+
+        const spContainer = document.getElementById('selling-points-container');
+        SELLING_POINTS_DATA.forEach(point => {
+            const label = document.createElement('label');
+            label.className = 'checkbox-label';
+            label.innerHTML = `<input type="checkbox" value="${point.id}" checked> ${point.label}`;
+            label.querySelector('input').addEventListener('change', (e) => {
+                if(e.target.checked) {
+                    state.selectedPoints.push(point.id);
+                } else {
+                    state.selectedPoints = state.selectedPoints.filter(id => id !== point.id);
+                }
+                const order = SELLING_POINTS_DATA.map(sp => sp.id);
+                state.selectedPoints.sort((a, b) => order.indexOf(a) - order.indexOf(b));
+                render();
+            });
+            spContainer.appendChild(label);
+        });
+
+        function loadImage(src) {
+            return new Promise((resolve) => {
+                if (!src) return resolve(null);
+                const img = new Image();
+                img.onload = () => resolve(img);
+                img.onerror = () => {
+                    console.error(`无法加载图片: ${src}`);
+                    resolve(null);
+                };
+                img.src = src;
+            });
+        }
+
+        async function initAssets() {
+            loadedAssets.frame = await loadImage(ASSETS_CONFIG.frameImage);
+            
+            for (let key in ASSETS_CONFIG.titleImages) {
+                loadedAssets.titles[key] = await loadImage(ASSETS_CONFIG.titleImages[key]);
+            }
+
+            for (let key in ASSETS_CONFIG.sellingPointImages) {
+                loadedAssets.sellingPoints[key] = await loadImage(ASSETS_CONFIG.sellingPointImages[key]);
+            }
+            
+            render();
+        }
+
+        document.getElementById('upload-img').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const img = new Image();
+                    img.onload = function() {
+                        productImg = img;
+                        
+                        // 重置各项参数
+                        state.scale = 1024 / Math.max(img.width, img.height);
+                        state.rotate = 0;
+                        state.offsetX = (1024 - img.width * state.scale) / 2;
+                        state.offsetY = (1024 - img.height * state.scale) / 2;
+                        
+                        // 更新UI显示
+                        document.getElementById('scale').value = state.scale;
+                        document.getElementById('scale-val').innerText = state.scale.toFixed(2);
+                        document.getElementById('rotate').value = state.rotate;
+                        document.getElementById('rotate-val').innerText = state.rotate + '°';
+                        document.getElementById('offsetX').value = state.offsetX;
+                        document.getElementById('offsetY').value = state.offsetY;
+                        document.getElementById('offsetX-val').innerText = Math.round(state.offsetX);
+                        document.getElementById('offsetY-val').innerText = Math.round(state.offsetY);
+                        
+                        render();
+                    }
+                    img.src = event.target.result;
+                }
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // 统一处理滑块事件
+        ['scale', 'rotate', 'offsetX', 'offsetY'].forEach(id => {
+            document.getElementById(id).addEventListener('input', function(e) {
+                state[id] = parseFloat(e.target.value);
+                
+                // 动态更新数值显示
+                let displayVal = state[id];
+                if (id === 'scale') {
+                    displayVal = state[id].toFixed(2);
+                } else if (id === 'rotate') {
+                    displayVal = state[id] + '°';
+                } else {
+                    displayVal = Math.round(state[id]);
+                }
+                document.getElementById(`${id}-val`).innerText = displayVal;
+                
+                render();
+            });
+        });
+
+        document.getElementById('product-type').addEventListener('change', function(e) {
+            state.productType = e.target.value;
+            render();
+        });
+
+        function render() {
+            ctx.clearRect(0, 0, 1024, 1024);
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(0, 0, 1024, 1024);
+
+            // 1. 底层：产品白底图（支持缩放、位移和中心旋转）
+            if (productImg) {
+                ctx.save(); // 保存当前未旋转的画布状态
+                
+                const drawW = productImg.width * state.scale;
+                const drawH = productImg.height * state.scale;
+                
+                // 计算图片的中心点
+                const centerX = state.offsetX + drawW / 2;
+                const centerY = state.offsetY + drawH / 2;
+                
+                // 将画布的原点移动到图片中心，然后旋转
+                ctx.translate(centerX, centerY);
+                ctx.rotate(state.rotate * Math.PI / 180);
+                
+                // 在新坐标系下绘制图片（坐标需要偏移回图片宽高的负一半）
+                ctx.drawImage(productImg, -drawW / 2, -drawH / 2, drawW, drawH);
+                
+                ctx.restore(); // 恢复画布状态，防止旋转影响到后续贴图
+            }
+
+            // 2. 覆盖层：主框架 Cover.png
+            if (loadedAssets.frame) {
+                ctx.drawImage(loadedAssets.frame, 0, 0, 1024, 1024);
+            }
+
+            // 3. 标题层：根据原始尺寸与设定的 0.75 缩放倍率绘制
+            const titleImg = loadedAssets.titles[state.productType];
+            if (titleImg) {
+                const pos = ASSETS_CONFIG.titlePosition;
+                const drawWidth = titleImg.width * pos.scale;
+                const drawHeight = titleImg.height * pos.scale;
+                ctx.drawImage(titleImg, pos.x, pos.y, drawWidth, drawHeight);
+            }
+
+            // 4. 卖点胶囊层
+            const layout = ASSETS_CONFIG.sellingPointLayout;
+            state.selectedPoints.forEach((pointId, index) => {
+                const currentY = layout.startY + (index * layout.gapY);
+                const spImg = loadedAssets.sellingPoints[pointId];
+
+                if (spImg) {
+                    ctx.drawImage(spImg, layout.startX, currentY, layout.width, layout.height);
+                }
+            });
+        }
+
+        document.getElementById('download-btn').addEventListener('click', function() {
+            const link = document.createElement('a');
+            link.download = `product_main_image_${new Date().getTime()}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        });
+
+        initAssets();
+    </script>
+
+</body></html>
