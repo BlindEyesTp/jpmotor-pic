@@ -210,18 +210,30 @@
             productType: 'mirrors',
             selectedPoints: SELLING_POINTS_DATA.map(sp => sp.id)
         };
-
+        // 卖点框
         const spContainer = document.getElementById('selling-points-container');
-        SELLING_POINTS_DATA.forEach(point => {
+        SELLING_POINTS_DATA.forEach((point, index) => {
             const label = document.createElement('label');
             label.className = 'checkbox-label';
-            label.innerHTML = `<input type="checkbox" value="${point.id}" checked> ${point.label}`;
+            
+            // 只有前 4 个默认打勾
+            const isChecked = index < 4 ? 'checked' : '';
+            label.innerHTML = `<input type="checkbox" value="${point.id}" ${isChecked}> ${point.label}`;
+            
             label.querySelector('input').addEventListener('change', (e) => {
                 if(e.target.checked) {
+                    // 核心拦截逻辑：如果已经选了 4 个，就阻止继续选择
+                    if(state.selectedPoints.length >= 4) {
+                        alert('空间有限，最多只能选择 4 个卖点');
+                        e.target.checked = false; // 强制取消刚刚的勾选
+                        return; // 中断后续执行
+                    }
                     state.selectedPoints.push(point.id);
                 } else {
                     state.selectedPoints = state.selectedPoints.filter(id => id !== point.id);
                 }
+                
+                // 保持原始数据顺序，不至于因为勾选先后导致胶囊乱跳
                 const order = SELLING_POINTS_DATA.map(sp => sp.id);
                 state.selectedPoints.sort((a, b) => order.indexOf(a) - order.indexOf(b));
                 render();
