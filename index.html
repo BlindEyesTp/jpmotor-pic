@@ -201,14 +201,14 @@
             sellingPoints: {}
         };
 
-        // 状态中新增了 rotate
+        // 初始化状态
         let state = {
             scale: 1,
             rotate: 0,
             offsetX: 0,
             offsetY: 0,
             productType: 'mirrors',
-            selectedPoints: SELLING_POINTS_DATA.map(sp => sp.id)
+            selectedPoints: SELLING_POINTS_DATA.slice(0, 4).map(sp => sp.id)
         };
         // 卖点框
         const spContainer = document.getElementById('selling-points-container');
