@@ -125,9 +125,10 @@
         <div class="control-group">
             <label>3. 选择产品类型</label>
             <select id="product-type">
-                <option value="mirrors">REARVIEW MIRRORS (后视镜)</option>
-                <option value="exhaust">EXHAUST PIPE (排气管)</option>
-                <option value="accessories">ACCESSORIES (摩托车配件)</option>
+                <option value="mirrors">后视镜</option>
+                <option value="exhaust">排气管</option>
+                <option value="accessories">摩托车配件</option>
+                <option value="cluster">仪表盘</option>
             </select>
         </div>
 
@@ -154,7 +155,8 @@
             titleImages: {
                 'mirrors': './images/Mirror.png',
                 'exhaust': './images/Pipe.png',
-                'accessories': './images/Accessories.png'
+                'accessories': './images/Accessories.png',
+                'cluster': './images/CLUSTER.png'
             },
             
             // 标题缩放倍率已修改为 0.75
@@ -163,8 +165,11 @@
             sellingPointImages: {
                 'waterproof': './images/Waterproof.png',
                 'durability': './images/HIGH DURABILITY.png',
-                'adjustable': './images/360° ADJUSTABLE.png',
-                'installation': './images/EASY INSTALLATION.png'
+                'adjustable': './images/ADJUSTABLE.png',
+                'installation': './images/EASY INSTALLATION.png',
+                'hdlens': './images/HD LENS.png',
+                'longlife': './images/LONG LIFE.png',
+                'wideangle': './images/WIDE ANGLE VIEW.png'
             },
 
             sellingPointLayout: {
@@ -179,8 +184,11 @@
         const SELLING_POINTS_DATA = [
             { id: 'waterproof', label: '防水' },
             { id: 'durability', label: '高可靠性' },
-            { id: 'adjustable', label: '360° 可调整' },
-            { id: 'installation', label: '简易安装' }
+            { id: 'adjustable', label: '可调整' },
+            { id: 'installation', label: '简易安装' },
+            { id: 'hdlens', label: '高清镜片' },
+            { id: 'longlife', label: '长寿命' },
+            { id: 'wideangle', label: '广角视野' }
         ];
 
         const canvas = document.getElementById('canvas');
